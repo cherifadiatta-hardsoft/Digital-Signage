@@ -3,7 +3,7 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useStore } from '../../store/useStore';
 import { MonitorPlay } from 'lucide-react';
 import { Slide } from '../../types';
-import { supabase } from '../../lib/supabaseClient';
+import { io, Socket } from 'socket.io-client';
 
 export default function TVClient() {
   const { id } = useParams<{ id: string }>();
@@ -38,88 +38,35 @@ export default function TVClient() {
     return () => clearInterval(timer);
   }, []);
 
-  // Realtime listener mechanism (BroadcastChannel + Supabase fallback)
+  // Realtime Socket.IO Connection
   useEffect(() => {
-    // 1. BroadcastChannel (Local Preview sync)
-    const channel = new BroadcastChannel('hardsoft_tv_channel');
-
-    // Announce presence (heartbeat) without direct store mutation on client to prevent race conditions
-    const emitHeartbeat = () => {
-      if (id) {
-        channel.postMessage({ type: 'PING', tvId: id });
-      }
-    };
-
-    emitHeartbeat();
-    const interval = setInterval(emitHeartbeat, 5000);
-
-    channel.onmessage = (event) => {
-      if (event.data.type === 'UPDATE_SLIDE') {
-        if (event.data.tvId === id || event.data.tvId === 'ALL') {
-          setActiveSlide(event.data.slide);
-        }
-      }
-    };
-
-    // 2. Supabase Integration (Production sync)
-    let supabaseChannel: any = null;
+    if (!id) return;
     
-    if (supabase && id) {
-      const fetchInitialData = async () => {
-        const { data, error } = await supabase
-          .from('tv_control')
-          .select('current_slide_url')
-          .eq('tv_id', id)
-          .single();
-        
-        if (data && data.current_slide_url) {
-          try {
-            setActiveSlide(JSON.parse(data.current_slide_url));
-          } catch (e) {
-            console.error('Invalid slide data in Supabase');
-          }
-        }
-      };
+    // Connect to same origin
+    const socket: Socket = io(window.location.origin);
+    
+    socket.on('connect', () => {
+       console.log('Connected to central server, registering TV...');
+       socket.emit('register_tv', id);
+    });
 
-      fetchInitialData();
+    socket.on('slide_updated', (slide: Slide | null) => {
+       console.log('Received slide update:', slide);
+       setActiveSlide(slide);
+       useStore.getState().assignSlideToTV(id, slide); // Persist across reloads
+    });
 
-      supabaseChannel = supabase
-        .channel(`schema-db-changes-${id}`)
-        .on('postgres_changes', { 
-          event: 'UPDATE', 
-          schema: 'public', 
-          table: 'tv_control', 
-          filter: `tv_id=eq.${id}` 
-        }, (payload: any) => {
-          if (payload.new && payload.new.current_slide_url) {
-            try {
-              setActiveSlide(JSON.parse(payload.new.current_slide_url));
-            } catch (e) {
-               console.error('Invalid slide data received from Supabase');
-            }
-          } else {
-            setActiveSlide(null); // Clear slide
-          }
-        })
-        .subscribe();
-    }
+    const interval = setInterval(() => {
+      if (socket.connected) {
+         socket.emit('heartbeat', id);
+      }
+    }, 5000);
 
     return () => {
       clearInterval(interval);
-      channel.close();
-      if (supabaseChannel) {
-        supabase.removeChannel(supabaseChannel);
-      }
+      socket.disconnect();
     };
   }, [id]);
-
-  // Fallback sync with global store if changed via other means
-  useEffect(() => {
-    // Only trust the store if supabase isn't active/primary for truth
-    if (!supabase) {
-      setActiveSlide(initialTv?.currentSlide || null);
-    }
-  }, [initialTv?.currentSlide]);
 
   if (!initialTv) {
     return (
@@ -214,34 +161,32 @@ export default function TVClient() {
           alignItems: 'center',
           justifyContent: 'center',
           backgroundColor: '#171717',
-          background: 'linear-gradient(to bottom right, #171717, #000000)',
           color: '#ffffff',
-          padding: '8vw',
           boxSizing: 'border-box'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '3vw', marginBottom: '6vh' }}>
-            <MonitorPlay style={{ width: '8vw', height: '8vw' }} color="#3b82f6" />
+          <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8%' }}>
+            <MonitorPlay style={{ width: '8vw', height: '8vw', minWidth: '80px', minHeight: '80px', marginRight: '3vw' }} color="#3b82f6" />
             <div>
               <h1 style={{ fontSize: '6vw', fontWeight: 'bold', margin: '0', letterSpacing: '-0.025em', lineHeight: 1 }}>HardSoft TV</h1>
-              <p style={{ fontSize: '2.5vw', color: '#60a5fa', fontWeight: '500', letterSpacing: '0.1em', marginTop: '1vh', textTransform: 'uppercase', margin: 0 }}>
+              <p style={{ fontSize: '2.5vw', color: '#60a5fa', fontWeight: '500', letterSpacing: '0.1em', marginTop: '10px', textTransform: 'uppercase', margin: 0 }}>
                 {initialTv.name}
               </p>
             </div>
           </div>
           
-          <div style={{ position: 'absolute', bottom: '8vh', left: '8vw', textAlign: 'left' }}>
-            <p style={{ color: '#737373', fontSize: '1.5vw', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '1vh', margin: 0 }}>
+          <div style={{ position: 'absolute', bottom: '8%', left: '8%', textAlign: 'left' }}>
+            <p style={{ color: '#737373', fontSize: '1.8vw', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px', margin: 0 }}>
               Identifiant de connexion
             </p>
             <p style={{
-              fontSize: '2.5vw',
+              fontSize: '3vw',
               fontFamily: 'monospace',
               fontWeight: 'bold',
               color: '#ffffff',
               letterSpacing: '0.1em',
               backgroundColor: 'rgba(255, 255, 255, 0.1)',
-              padding: '1.5vh 1.5vw',
-              borderRadius: '1vw',
+              padding: '1vw 2vw',
+              borderRadius: '8px',
               border: '1px solid rgba(255, 255, 255, 0.1)',
               display: 'inline-block',
               margin: 0
@@ -250,30 +195,29 @@ export default function TVClient() {
             </p>
           </div>
 
-          <div style={{ position: 'absolute', bottom: '8vh', right: '8vw', textAlign: 'right' }}>
+          <div style={{ position: 'absolute', bottom: '8%', right: '8%', textAlign: 'right' }}>
             <p style={{ fontSize: '5vw', fontWeight: '300', fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.025em', margin: 0, lineHeight: 1 }}>
               {currentTime.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
             </p>
-            <p style={{ fontSize: '1.8vw', color: '#a3a3a3', fontWeight: '500', marginTop: '1vh', margin: 0 }}>
+            <p style={{ fontSize: '2vw', color: '#a3a3a3', fontWeight: '500', marginTop: '10px', margin: 0 }}>
               {currentTime.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
             </p>
           </div>
           
           <div style={{
             position: 'absolute',
-            top: '8vh',
-            left: '8vw',
+            top: '8%',
+            left: '8%',
             display: 'flex',
             alignItems: 'center',
-            gap: '1vw',
             backgroundColor: 'rgba(34, 197, 94, 0.2)',
             color: '#4ade80',
-            padding: '1vh 1.5vw',
+            padding: '1vw 2vw',
             borderRadius: '9999px',
             border: '1px solid rgba(34, 197, 94, 0.3)'
           }}>
-            <span style={{ width: '1vw', height: '1vw', borderRadius: '50%', backgroundColor: '#4ade80' }}></span>
-            <span style={{ fontSize: '1.2vw', fontWeight: 'bold', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+            <span style={{ width: '1vw', minWidth: '10px', height: '1vw', minHeight: '10px', borderRadius: '50%', backgroundColor: '#4ade80', marginRight: '1vw' }}></span>
+            <span style={{ fontSize: '1.5vw', fontWeight: 'bold', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
               En Ligne &bull; Connecté au Serveur
             </span>
           </div>

@@ -75,7 +75,7 @@ export default function TVLogin() {
           padding: '32px',
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
         }}>
-          <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column' }}>
             {error && (
               <div style={{
                 padding: '16px',
@@ -85,15 +85,16 @@ export default function TVLogin() {
                 color: '#ef4444',
                 fontSize: '14px',
                 fontWeight: '500',
-                textAlign: 'center'
+                textAlign: 'center',
+                marginBottom: '24px'
               }}>
                 {error}
               </div>
             )}
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <label style={{ fontSize: '14px', fontWeight: '500', color: '#a3a3a3', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <MonitorPlay size={16} />
+            <div style={{ display: 'flex', flexDirection: 'column', marginBottom: '24px' }}>
+              <label style={{ fontSize: '14px', fontWeight: '500', color: '#a3a3a3', display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
+                <MonitorPlay size={16} style={{ marginRight: '8px' }} />
                 ID de la Smart TV
               </label>
               <input
@@ -119,9 +120,9 @@ export default function TVLogin() {
               />
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <label style={{ fontSize: '14px', fontWeight: '500', color: '#a3a3a3', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <KeyRound size={16} />
+            <div style={{ display: 'flex', flexDirection: 'column', marginBottom: '24px' }}>
+              <label style={{ fontSize: '14px', fontWeight: '500', color: '#a3a3a3', display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
+                <KeyRound size={16} style={{ marginRight: '8px' }} />
                 Code d'accès
               </label>
               <input
@@ -160,13 +161,12 @@ export default function TVLogin() {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '8px',
                 cursor: 'pointer',
                 marginTop: '8px'
               }}
             >
               Connecter l'Écran
-              <ArrowRight size={20} />
+              <ArrowRight size={20} style={{ marginLeft: '8px' }} />
             </button>
           </form>
         </div>

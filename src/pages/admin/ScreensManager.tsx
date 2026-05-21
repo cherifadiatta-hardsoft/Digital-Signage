@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useStore } from '../../store/useStore';
 import { Send, MonitorPlay, ExternalLink, Plus, KeyRound, CheckCircle2, Settings, Trash2, RefreshCcw } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Slide } from '../../types';
-import { supabase } from '../../lib/supabaseClient';
+import { io, Socket } from 'socket.io-client';
 
 export default function ScreensManager() {
   const tvs = useStore((state) => state.tvs);
@@ -24,24 +24,42 @@ export default function ScreensManager() {
   const [editingTV, setEditingTV] = useState<{ id: string; originalId: string; name: string; location: string } | null>(null);
   const [confirmAction, setConfirmAction] = useState<{ type: 'delete' | 'reset-id' | 'reset-code', tvId: string } | null>(null);
 
+  // Socket
+  const [socket, setSocket] = useState<Socket | null>(null);
+
+  useEffect(() => {
+    // Admin dashboard socket
+    const newSocket = io(window.location.origin);
+    setSocket(newSocket);
+    
+    // Listen for TV online status to update UI
+    newSocket.on('tv_online', (tvId: string) => {
+      // Small state change indicating tv is online
+      const tvState = useStore.getState().tvs.find(t => t.id === tvId);
+      if (tvState) {
+        useStore.getState().updateTVStatus(tvId, 'ONLINE');
+      }
+    });
+
+    newSocket.on('tv_offline', (tvId: string) => {
+      // Indicate tv offline
+      const tvState = useStore.getState().tvs.find(t => t.id === tvId);
+      if (tvState) {
+        useStore.getState().updateTVStatus(tvId, 'OFFLINE');
+      }
+    });
+
+    return () => {
+      newSocket.disconnect();
+    };
+  }, []);
+
   const handleSendSlide = async (slide: Slide | null) => {
     if (selectedTV) {
       assignSlideToTV(selectedTV, slide);
       
-      // Local fallback sync
-      const channel = new BroadcastChannel('hardsoft_tv_channel');
-      channel.postMessage({ type: 'UPDATE_SLIDE', tvId: selectedTV, slide });
-      channel.close();
-      
-      // Production Supabase sync
-      if (supabase) {
-        await supabase
-          .from('tv_control')
-          .upsert({ 
-            tv_id: selectedTV, 
-            current_slide_url: slide ? JSON.stringify(slide) : null,
-            updated_at: new Date().toISOString()
-          }, { onConflict: 'tv_id' });
+      if (socket) {
+        socket.emit('update_slide', { tvId: selectedTV, slide });
       }
       
       if (slide) {
@@ -54,24 +72,8 @@ export default function ScreensManager() {
   const handleBroadcast = async (slide: Slide | null) => {
     broadcastSlide(slide);
     
-    // Local fallback sync
-    const channel = new BroadcastChannel('hardsoft_tv_channel');
-    channel.postMessage({ type: 'UPDATE_SLIDE', tvId: 'ALL', slide });
-    channel.close();
-
-    // Production Supabase sync
-    if (supabase) {
-      const activeTvs = tvs.filter(t => t.status === 'ONLINE').map(t => t.id);
-      
-      if (activeTvs.length > 0) {
-        const updates = activeTvs.map(tvId => ({
-          tv_id: tvId,
-          current_slide_url: slide ? JSON.stringify(slide) : null,
-          updated_at: new Date().toISOString()
-        }));
-
-        await supabase.from('tv_control').upsert(updates, { onConflict: 'tv_id' });
-      }
+    if (socket) {
+      socket.emit('update_slide', { tvId: 'ALL', slide });
     }
 
     if (slide) {
