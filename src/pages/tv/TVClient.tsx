@@ -70,22 +70,13 @@ export default function TVClient() {
 
   if (!initialTv) {
     return (
-      <div style={{
-        display: 'flex',
-        height: '100vh',
-        width: '100vw',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: '#000000',
-        color: '#ffffff',
-        fontFamily: 'sans-serif'
-      }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ border: '1px solid #525252', borderRadius: '8px', padding: '8px', display: 'inline-block', marginBottom: '16px' }}>
-            <MonitorPlay size={64} color="#525252" />
+      <div className="fixed inset-0 flex items-center justify-center bg-black text-white font-sans m-0 p-0">
+        <div className="text-center">
+          <div className="border border-neutral-600 rounded-lg p-3 inline-block mb-6">
+            <MonitorPlay className="w-16 h-16 text-neutral-600" />
           </div>
-          <h1 style={{ fontSize: '24px', fontWeight: 'bold', margin: '0 0 8px 0' }}>Écran Non Enregistré</h1>
-          <p style={{ color: '#737373', margin: 0 }}>L'ID {id} n'existe pas dans le système.</p>
+          <h1 className="text-3xl font-bold mb-3">Écran Non Enregistré</h1>
+          <p className="text-neutral-400 text-lg">L'ID {id} n'existe pas dans le système.</p>
         </div>
       </div>
     );
@@ -94,55 +85,20 @@ export default function TVClient() {
   const slide = activeSlide;
 
   return (
-    <div style={{
-      display: 'flex',
-      height: '100vh',
-      width: '100vw',
-      backgroundColor: '#000000',
-      overflow: 'hidden',
-      position: 'relative',
-      cursor: 'none',
-      fontFamily: 'sans-serif'
-    }}>
+    <div className="fixed inset-0 bg-neutral-950 overflow-hidden text-white font-sans select-none cursor-none flex flex-col items-center justify-center p-8">
       {/* If there is a slide displaying */}
       {slide ? (
-        <div style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          width: '100%',
-          height: '100%'
-        }}>
+        <div className="absolute inset-0 w-full h-full">
           {slide.type === 'image' && (
             <img 
               src={slide.content} 
               alt={slide.title} 
-              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              className="w-full h-full object-cover"
             />
           )}
           {slide.type === 'text' && (
-            <div style={{
-              width: '100%',
-              height: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: '#1e3a8a',
-              background: 'linear-gradient(to bottom right, #1e3a8a, #0f172a)',
-              padding: '48px',
-              boxSizing: 'border-box'
-            }}>
-              <h1 style={{
-                fontSize: '8vw',
-                fontWeight: 'bold',
-                color: '#ffffff',
-                textAlign: 'center',
-                lineHeight: '1.2',
-                maxWidth: '90%',
-                margin: 0
-              }}>
+            <div className="w-full h-full flex flex-col items-center justify-center bg-blue-950 bg-gradient-to-br from-blue-900 to-indigo-950 p-12 lg:p-24">
+              <h1 className="text-4xl sm:text-6xl md:text-8xl lg:text-[10rem] font-bold text-white text-center leading-tight">
                 {slide.content}
               </h1>
             </div>
@@ -150,75 +106,39 @@ export default function TVClient() {
         </div>
       ) : (
         /* Default Standby Screen */
-        <div style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: '#171717',
-          color: '#ffffff',
-          boxSizing: 'border-box'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8%' }}>
-            <MonitorPlay style={{ width: '8vw', height: '8vw', minWidth: '80px', minHeight: '80px', marginRight: '3vw' }} color="#3b82f6" />
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-neutral-900 bg-gradient-to-br from-neutral-900 to-black p-8">
+          <div className="flex items-center gap-6 md:gap-10 mb-8 md:mb-16">
+            <MonitorPlay className="w-16 h-16 md:w-32 md:h-32 text-blue-500" />
             <div>
-              <h1 style={{ fontSize: '6vw', fontWeight: 'bold', margin: '0', letterSpacing: '-0.025em', lineHeight: 1 }}>HardSoft TV</h1>
-              <p style={{ fontSize: '2.5vw', color: '#60a5fa', fontWeight: '500', letterSpacing: '0.1em', marginTop: '10px', textTransform: 'uppercase', margin: 0 }}>
+              <h1 className="text-5xl md:text-8xl font-bold tracking-tight leading-none mb-2 md:mb-4">HardSoft TV</h1>
+              <p className="text-2xl md:text-4xl text-blue-400 font-medium tracking-widest uppercase">
                 {initialTv.name}
               </p>
             </div>
           </div>
           
-          <div style={{ position: 'absolute', bottom: '8%', left: '8%', textAlign: 'left' }}>
-            <p style={{ color: '#737373', fontSize: '1.8vw', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px', margin: 0 }}>
+          <div className="absolute bottom-10 left-10 md:bottom-16 md:left-16 text-left">
+            <p className="text-neutral-400 text-lg md:text-2xl uppercase tracking-wider mb-2">
               Identifiant de connexion
             </p>
-            <p style={{
-              fontSize: '3vw',
-              fontFamily: 'monospace',
-              fontWeight: 'bold',
-              color: '#ffffff',
-              letterSpacing: '0.1em',
-              backgroundColor: 'rgba(255, 255, 255, 0.1)',
-              padding: '1vw 2vw',
-              borderRadius: '8px',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              display: 'inline-block',
-              margin: 0
-            }}>
+            <p className="text-3xl md:text-5xl font-mono font-bold text-white tracking-widest bg-white/10 px-6 py-4 md:px-8 md:py-6 rounded-2xl border border-white/10 inline-block">
               {initialTv.id}
             </p>
           </div>
 
-          <div style={{ position: 'absolute', bottom: '8%', right: '8%', textAlign: 'right' }}>
-            <p style={{ fontSize: '5vw', fontWeight: '300', fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.025em', margin: 0, lineHeight: 1 }}>
+          <div className="absolute bottom-10 right-10 md:bottom-16 md:right-16 text-right">
+            <p className="text-6xl md:text-8xl font-light tabular-nums tracking-tight leading-none">
               {currentTime.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
             </p>
-            <p style={{ fontSize: '2vw', color: '#a3a3a3', fontWeight: '500', marginTop: '10px', margin: 0 }}>
+            <p className="text-xl md:text-3xl text-neutral-400 font-medium mt-4">
               {currentTime.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
             </p>
           </div>
           
-          <div style={{
-            position: 'absolute',
-            top: '8%',
-            left: '8%',
-            display: 'flex',
-            alignItems: 'center',
-            backgroundColor: 'rgba(34, 197, 94, 0.2)',
-            color: '#4ade80',
-            padding: '1vw 2vw',
-            borderRadius: '9999px',
-            border: '1px solid rgba(34, 197, 94, 0.3)'
-          }}>
-            <span style={{ width: '1vw', minWidth: '10px', height: '1vw', minHeight: '10px', borderRadius: '50%', backgroundColor: '#4ade80', marginRight: '1vw' }}></span>
-            <span style={{ fontSize: '1.5vw', fontWeight: 'bold', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
-              En Ligne &bull; Connecté au Serveur
+          <div className="absolute top-10 left-10 md:top-16 md:left-16 flex items-center gap-4 bg-green-500/20 text-green-400 px-6 py-3 rounded-full border border-green-500/30">
+            <span className="w-3 h-3 md:w-4 md:h-4 rounded-full bg-green-400 animate-pulse"></span>
+            <span className="text-sm md:text-xl font-bold tracking-wider uppercase">
+              En Ligne &bull; Connecté
             </span>
           </div>
         </div>

@@ -37,64 +37,27 @@ export default function TVLogin() {
   };
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      backgroundColor: '#0a0a0a',
-      fontFamily: 'sans-serif',
-      color: '#ffffff',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '24px'
-    }}>
-      <div style={{ width: '100%', maxWidth: '450px' }}>
-        <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-          <div style={{
-            width: '80px',
-            height: '80px',
-            backgroundColor: '#171717',
-            border: '1px solid #262626',
-            borderRadius: '16px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            margin: '0 auto 24px auto',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
-          }}>
-            <MonitorPlay size={40} color="#3b82f6" />
+    <div className="min-h-screen bg-neutral-950 flex flex-col items-center justify-center p-6 text-white font-sans">
+      <div className="w-full max-w-[450px]">
+        <div className="text-center mb-10">
+          <div className="w-20 h-20 bg-neutral-900 border border-neutral-800 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-2xl">
+            <MonitorPlay className="w-10 h-10 text-blue-500" />
           </div>
-          <h1 style={{ fontSize: '28px', fontWeight: 'bold', margin: '0 0 8px 0', letterSpacing: '-0.025em' }}>HardSoft TV Client</h1>
-          <p style={{ color: '#a3a3a3', margin: 0 }}>Connectez cet écran au serveur central</p>
+          <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-2">HardSoft TV Client</h1>
+          <p className="text-neutral-400">Connectez cet écran au serveur central</p>
         </div>
 
-        <div style={{
-          backgroundColor: '#171717',
-          border: '1px solid #262626',
-          borderRadius: '16px',
-          padding: '32px',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
-        }}>
-          <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column' }}>
+        <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-8 shadow-2xl">
+          <form onSubmit={handleLogin} className="flex flex-col">
             {error && (
-              <div style={{
-                padding: '16px',
-                backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                border: '1px solid rgba(239, 68, 68, 0.2)',
-                borderRadius: '8px',
-                color: '#ef4444',
-                fontSize: '14px',
-                fontWeight: '500',
-                textAlign: 'center',
-                marginBottom: '24px'
-              }}>
+              <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-500 text-sm font-medium text-center mb-6">
                 {error}
               </div>
             )}
 
-            <div style={{ display: 'flex', flexDirection: 'column', marginBottom: '24px' }}>
-              <label style={{ fontSize: '14px', fontWeight: '500', color: '#a3a3a3', display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
-                <MonitorPlay size={16} style={{ marginRight: '8px' }} />
+            <div className="flex flex-col mb-6">
+              <label className="text-sm font-medium text-neutral-400 flex items-center mb-2">
+                <MonitorPlay className="w-4 h-4 mr-2" />
                 ID de la Smart TV
               </label>
               <input
@@ -103,26 +66,13 @@ export default function TVLogin() {
                 onChange={(e) => setTvId(e.target.value.toUpperCase())}
                 placeholder="Ex: TV-DAKAR-001"
                 required
-                style={{
-                  width: '100%',
-                  backgroundColor: '#0a0a0a',
-                  border: '1px solid #262626',
-                  borderRadius: '12px',
-                  padding: '12px 16px',
-                  color: '#ffffff',
-                  outline: 'none',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em',
-                  fontFamily: 'monospace',
-                  fontSize: '16px',
-                  boxSizing: 'border-box'
-                }}
+                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-white placeholder-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all uppercase tracking-wider font-mono text-base"
               />
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', marginBottom: '24px' }}>
-              <label style={{ fontSize: '14px', fontWeight: '500', color: '#a3a3a3', display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
-                <KeyRound size={16} style={{ marginRight: '8px' }} />
+            <div className="flex flex-col mb-6">
+              <label className="text-sm font-medium text-neutral-400 flex items-center mb-2">
+                <KeyRound className="w-4 h-4 mr-2" />
                 Code d'accès
               </label>
               <input
@@ -131,47 +81,21 @@ export default function TVLogin() {
                 onChange={(e) => setCode(e.target.value)}
                 placeholder="••••••"
                 required
-                style={{
-                  width: '100%',
-                  backgroundColor: '#0a0a0a',
-                  border: '1px solid #262626',
-                  borderRadius: '12px',
-                  padding: '12px 16px',
-                  color: '#ffffff',
-                  outline: 'none',
-                  letterSpacing: '0.1em',
-                  fontFamily: 'monospace',
-                  fontSize: '16px',
-                  boxSizing: 'border-box'
-                }}
+                className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-white placeholder-neutral-600 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all tracking-[0.2em] font-mono text-lg"
               />
             </div>
 
             <button
               type="submit"
-              style={{
-                width: '100%',
-                backgroundColor: '#2563eb',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '12px',
-                padding: '14px 16px',
-                fontSize: '16px',
-                fontWeight: '500',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                marginTop: '8px'
-              }}
+              className="w-full bg-blue-600 hover:bg-blue-500 text-white rounded-xl px-4 py-3.5 text-base font-medium flex items-center justify-center transition-all mt-2 group"
             >
               Connecter l'Écran
-              <ArrowRight size={20} style={{ marginLeft: '8px' }} />
+              <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
             </button>
           </form>
         </div>
 
-        <p style={{ textAlign: 'center', color: '#525252', marginTop: '32px', fontSize: '14px' }}>
+        <p className="text-center text-neutral-500 mt-8 text-sm">
           Pour configurer une nouvelle TV, générez un code d'accès depuis le tableau de bord administrateur.
         </p>
       </div>
