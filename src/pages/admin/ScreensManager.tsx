@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useStore } from '../../store/useStore';
-import { Send, MonitorPlay, ExternalLink, Plus, KeyRound } from 'lucide-react';
+import { Send, MonitorPlay, ExternalLink, Plus, KeyRound, CheckCircle2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Slide } from '../../types';
 
@@ -9,8 +9,10 @@ export default function ScreensManager() {
   const slides = useStore((state) => state.slides);
   const assignSlideToTV = useStore((state) => state.assignSlideToTV);
   const addTV = useStore((state) => state.addTV);
+  const broadcastSlide = useStore((state) => state.broadcastSlide);
 
   const [selectedTV, setSelectedTV] = useState<string | null>(null);
+  const [sentStatus, setSentStatus] = useState<string | null>(null);
   
   // New TV modal state
   const [isAddingTV, setIsAddingTV] = useState(false);
@@ -20,7 +22,15 @@ export default function ScreensManager() {
   const handleSendSlide = (slide: Slide) => {
     if (selectedTV) {
       assignSlideToTV(selectedTV, slide);
+      setSentStatus(slide.id);
+      setTimeout(() => setSentStatus(null), 2000);
     }
+  };
+
+  const handleBroadcast = (slide: Slide) => {
+    broadcastSlide(slide);
+    setSentStatus('broadcast-' + slide.id);
+    setTimeout(() => setSentStatus(null), 2000);
   };
 
   const handleCreateTV = (e: React.FormEvent) => {
@@ -181,9 +191,18 @@ export default function ScreensManager() {
       <div className="w-1/2 bg-white rounded-xl border border-neutral-200 shadow-sm flex flex-col">
         {selectedTV ? (
           <>
-            <div className="p-4 border-b border-neutral-200 bg-neutral-50">
-              <h3 className="font-semibold text-neutral-800">Contrôle : {tvs.find(t => t.id === selectedTV)?.name}</h3>
-              <p className="text-sm text-neutral-500 mt-1">Envoyer un contenu instantanément à cet écran</p>
+            <div className="p-4 border-b border-neutral-200 bg-neutral-50 flex justify-between items-center">
+              <div>
+                <h3 className="font-semibold text-neutral-800">Contrôle : {tvs.find(t => t.id === selectedTV)?.name}</h3>
+                <p className="text-sm text-neutral-500 mt-1">Envoyer un contenu instantanément à cet écran</p>
+              </div>
+              <button
+                onClick={() => setSelectedTV(null)}
+                className="text-xs px-3 py-1.5 bg-neutral-200 hover:bg-neutral-300 text-neutral-700 rounded-md font-medium transition-colors"
+                title="Désélectionner pour diffuser sur tous les écrans"
+              >
+                Tout voir
+              </button>
             </div>
             <div className="flex-1 overflow-auto p-4">
               <div className="grid grid-cols-2 gap-4">
@@ -207,10 +226,25 @@ export default function ScreensManager() {
                       
                       <button 
                         onClick={() => handleSendSlide(slide)}
-                        className="w-full flex justify-center items-center gap-2 bg-neutral-900 hover:bg-neutral-800 text-white py-1.5 rounded-md text-sm font-medium transition-colors"
+                        disabled={sentStatus === slide.id}
+                        className={cn(
+                          "w-full flex justify-center items-center gap-2 py-1.5 rounded-md text-sm font-medium transition-colors",
+                          sentStatus === slide.id 
+                            ? "bg-green-500 text-white"
+                            : "bg-neutral-900 hover:bg-neutral-800 text-white"
+                        )}
                       >
-                        <Send className="w-3.5 h-3.5" />
-                        Envoyer à l'écran
+                        {sentStatus === slide.id ? (
+                          <>
+                            <CheckCircle2 className="w-4 h-4" />
+                            Envoyé !
+                          </>
+                        ) : (
+                          <>
+                            <Send className="w-3.5 h-3.5" />
+                            Envoyer sa propre slide
+                          </>
+                        )}
                       </button>
                     </div>
                   </div>
@@ -228,11 +262,70 @@ export default function ScreensManager() {
             </div>
           </>
         ) : (
-          <div className="flex-1 flex flex-col items-center justify-center text-neutral-500 p-8 text-center">
-            <MonitorPlay className="w-12 h-12 text-neutral-300 mb-4" />
-            <p className="text-lg font-medium text-neutral-700">Sélectionnez un écran</p>
-            <p className="text-sm max-w-sm mt-2">Cliquez sur un écran dans la liste de gauche pour voir ses détails et lui envoyer du contenu.</p>
-          </div>
+          <>
+            <div className="p-4 border-b border-blue-200 bg-blue-50">
+              <h3 className="font-semibold text-blue-900 flex items-center gap-2">
+                <Send className="w-4 h-4" /> Diffusion Générale
+              </h3>
+              <p className="text-sm text-blue-700 mt-1">Sélectionnez un contenu à diffuser instantanément sur TOUS les écrans en ligne.</p>
+            </div>
+            <div className="flex-1 overflow-auto p-4">
+              <div className="grid grid-cols-2 gap-4">
+                {slides.map((slide) => (
+                  <div key={slide.id} className="border border-neutral-200 rounded-lg overflow-hidden flex flex-col bg-white hover:shadow-md transition-shadow">
+                    <div className="h-32 bg-neutral-100 relative">
+                      {slide.type === 'image' && (
+                        <img src={slide.content} alt={slide.title} className="w-full h-full object-cover" />
+                      )}
+                      {slide.type === 'text' && (
+                        <div className="w-full h-full flex flex-col items-center justify-center p-4 text-center bg-blue-50">
+                          <p className="text-sm font-medium text-blue-900 line-clamp-3">{slide.content}</p>
+                        </div>
+                      )}
+                      <div className="absolute top-2 right-2 bg-black/60 text-white text-[10px] px-2 py-0.5 rounded backdrop-blur-sm">
+                        {slide.duration}s
+                      </div>
+                    </div>
+                    <div className="p-3 border-t border-neutral-100 flex-1 flex flex-col justify-between">
+                      <p className="font-medium text-sm text-neutral-900 line-clamp-1 mb-3">{slide.title}</p>
+                      
+                      <button 
+                        onClick={() => handleBroadcast(slide)}
+                        disabled={sentStatus === 'broadcast-' + slide.id}
+                        className={cn(
+                          "w-full flex justify-center items-center gap-2 py-1.5 rounded-md text-sm font-medium transition-colors",
+                          sentStatus === 'broadcast-' + slide.id 
+                            ? "bg-green-500 text-white"
+                            : "bg-blue-600 hover:bg-blue-700 text-white"
+                        )}
+                      >
+                        {sentStatus === 'broadcast-' + slide.id ? (
+                          <>
+                            <CheckCircle2 className="w-4 h-4" />
+                            Diffusé partout !
+                          </>
+                        ) : (
+                          <>
+                            <Send className="w-3.5 h-3.5" />
+                            Diffuser à tous
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+
+                <div className="col-span-2 mt-4">
+                   <button 
+                      onClick={() => broadcastSlide(null)}
+                      className="w-full border-2 border-dashed border-red-200 text-red-600 hover:bg-red-50 py-3 rounded-lg text-sm font-medium transition-colors"
+                    >
+                      Arrêter la diffusion globale (Afficher Logo)
+                    </button>
+                </div>
+              </div>
+            </div>
+          </>
         )}
       </div>
     </div>
