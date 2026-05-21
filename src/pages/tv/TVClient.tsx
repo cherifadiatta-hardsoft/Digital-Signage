@@ -15,6 +15,7 @@ export default function TVClient() {
   
   // Local state for instant reaction
   const [activeSlide, setActiveSlide] = useState<Slide | null>(initialTv?.currentSlide || null);
+  const [isConnected, setIsConnected] = useState(false);
 
   // Authentication Check
   useEffect(() => {
@@ -47,7 +48,13 @@ export default function TVClient() {
     
     socket.on('connect', () => {
        console.log('Connected to central server, registering TV...');
+       setIsConnected(true);
        socket.emit('register_tv', id);
+    });
+
+    socket.on('disconnect', () => {
+       console.log('Disconnected from central server');
+       setIsConnected(false);
     });
 
     socket.on('slide_updated', (slide: Slide | null) => {
@@ -135,10 +142,10 @@ export default function TVClient() {
             </p>
           </div>
           
-          <div className="absolute top-10 left-10 md:top-16 md:left-16 flex items-center gap-4 bg-green-500/20 text-green-400 px-6 py-3 rounded-full border border-green-500/30">
-            <span className="w-3 h-3 md:w-4 md:h-4 rounded-full bg-green-400 animate-pulse"></span>
+          <div className={`absolute top-10 left-10 md:top-16 md:left-16 flex items-center gap-4 px-6 py-3 rounded-full border ${isConnected ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-red-500/20 text-red-400 border-red-500/30'}`}>
+            <span className={`w-3 h-3 md:w-4 md:h-4 rounded-full ${isConnected ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`}></span>
             <span className="text-sm md:text-xl font-bold tracking-wider uppercase">
-              En Ligne &bull; Connecté
+              {isConnected ? 'En Ligne • Connecté' : 'Hors Ligne • Déconnecté'}
             </span>
           </div>
         </div>

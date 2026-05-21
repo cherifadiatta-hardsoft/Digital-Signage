@@ -39,6 +39,7 @@ async function startServer() {
 
     // TV connects
     socket.on("register_tv", (tvId: string) => {
+      if (!tvId || typeof tvId !== 'string') return;
       console.log(`TV Registered: ${tvId}`);
       tvClients.set(socket.id, tvId);
       socket.join(`tv_${tvId}`);
@@ -47,6 +48,7 @@ async function startServer() {
 
     // Admin updates a tv slide
     socket.on("update_slide", ({ tvId, slide }) => {
+      if (!tvId || typeof tvId !== 'string') return;
       console.log(`Updating slide for TV: ${tvId}`);
       if (tvId === "ALL") {
         io.emit("slide_updated", slide);
@@ -57,6 +59,7 @@ async function startServer() {
 
     // Heartbeat from TVs
     socket.on("heartbeat", (tvId: string) => {
+      if (!tvId || typeof tvId !== 'string') return;
       io.emit("tv_online", tvId); // Forward to admin
     });
 
