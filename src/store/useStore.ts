@@ -13,6 +13,8 @@ interface AppState {
   assignPlaylistToTV: (tvId: string, playlistId: string | null) => void;
   addSlide: (slide: Slide) => void;
   addTV: (tv: SmartTV) => void;
+  updateTV: (oldId: string, updates: Partial<SmartTV>) => void;
+  deleteTV: (id: string) => void;
   broadcastSlide: (slide: Slide | null) => void;
   
   // Used by TV client to broadcast their heartbeat
@@ -44,6 +46,14 @@ export const useStore = create<AppState>()(
 
       addTV: (tv) => set((state) => ({
         tvs: [...state.tvs, tv]
+      })),
+
+      updateTV: (oldId, updates) => set((state) => ({
+        tvs: state.tvs.map((tv) => tv.id === oldId ? { ...tv, ...updates } : tv)
+      })),
+
+      deleteTV: (id) => set((state) => ({
+        tvs: state.tvs.filter((tv) => tv.id !== id)
       })),
 
       broadcastSlide: (slide) => set((state) => ({

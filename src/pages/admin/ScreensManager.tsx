@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useStore } from '../../store/useStore';
-import { Send, MonitorPlay, ExternalLink, Plus, KeyRound, CheckCircle2 } from 'lucide-react';
+import { Send, MonitorPlay, ExternalLink, Plus, KeyRound, CheckCircle2, Settings, Trash2, RefreshCcw } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Slide } from '../../types';
 import { supabase } from '../../lib/supabaseClient';
@@ -10,6 +10,8 @@ export default function ScreensManager() {
   const slides = useStore((state) => state.slides);
   const assignSlideToTV = useStore((state) => state.assignSlideToTV);
   const addTV = useStore((state) => state.addTV);
+  const updateTV = useStore((state) => state.updateTV);
+  const deleteTV = useStore((state) => state.deleteTV);
   const broadcastSlide = useStore((state) => state.broadcastSlide);
 
   const [selectedTV, setSelectedTV] = useState<string | null>(null);
@@ -19,6 +21,7 @@ export default function ScreensManager() {
   const [isAddingTV, setIsAddingTV] = useState(false);
   const [newTVDetails, setNewTVDetails] = useState({ name: '', location: '' });
   const [generatedTV, setGeneratedTV] = useState<{ id: string; code: string } | null>(null);
+  const [editingTV, setEditingTV] = useState<{ id: string; originalId: string; name: string; location: string } | null>(null);
 
   const handleSendSlide = async (slide: Slide | null) => {
     if (selectedTV) {
@@ -95,6 +98,44 @@ export default function ScreensManager() {
 
     setGeneratedTV({ id: newId, code: newCode });
     setNewTVDetails({ name: '', location: '' });
+  };
+
+  const handleUpdateTV = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingTV || !editingTV.name) return;
+    
+    updateTV(editingTV.originalId, {
+      id: editingTV.id, // ID could potentially be modified
+      name: editingTV.name,
+      location: editingTV.location,
+    });
+    setEditingTV(null);
+  };
+
+  const handleRegenerateCode = (tvId: string) => {
+    if (confirm("Voulez-vous vraiment générer un nouveau code d'accès pour cet écran ? Les accès actuels seront révoqués.")) {
+      const newCode = Math.floor(100000 + Math.random() * 900000).toString();
+      updateTV(tvId, { code: newCode });
+      alert(`Nouveau code généré : ${newCode}`);
+    }
+  };
+
+  const handleRegenerateId = (tvId: string) => {
+    if (confirm("Voulez-vous vraiment générer un nouvel identifiant (ID) pour cet écran ? Les liens existants ne fonctionneront plus.")) {
+      const newId = `TV-${Math.random().toString(36).substring(2, 6).toUpperCase()}-${Math.floor(100 + Math.random() * 900)}`;
+      updateTV(tvId, { id: newId });
+      alert(`Nouvel identifiant généré : ${newId}`);
+      if (selectedTV === tvId) {
+        setSelectedTV(newId);
+      }
+    }
+  };
+
+  const handleDeleteTV = (tvId: string) => {
+    if (confirm("Voulez-vous vraiment supprimer cet écran ?")) {
+      deleteTV(tvId);
+      if (selectedTV === tvId) setSelectedTV(null);
+    }
   };
 
   return (
@@ -203,60 +244,107 @@ export default function ScreensManager() {
                   : "border-neutral-200 hover:border-neutral-300 bg-white"
               )}
             >
-              <div className="flex justify-between items-start mb-2">
-                <div>
-                  <h4 className="font-medium text-neutral-900 flex items-center gap-2">
-                    <MonitorPlay className="w-4 h-4 text-neutral-500" />
-                    {tv.name}
-                  </h4>
-                  <p className="text-xs text-neutral-500 mt-1">ID: {tv.id} &bull; {tv.location}</p>
+              {editingTV && editingTV.originalId === tv.id ? (
+                <div onClick={(e) => e.stopPropagation()} className="space-y-4">
+                  <h4 className="font-medium text-sm text-neutral-800">Configuration de l'écran</h4>
+                  <form onSubmit={handleUpdateTV} className="space-y-3">
+                    <div>
+                      <label className="block text-xs font-medium text-neutral-500 mb-1">Nom</label>
+                      <input 
+                        type="text" 
+                        value={editingTV.name}
+                        onChange={e => setEditingTV({...editingTV, name: e.target.value})}
+                        className="w-full text-sm border border-neutral-300 rounded p-2 focus:ring-2 focus:ring-blue-500 outline-none"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-neutral-500 mb-1">Emplacement</label>
+                      <input 
+                        type="text" 
+                        value={editingTV.location}
+                        onChange={e => setEditingTV({...editingTV, location: e.target.value})}
+                        className="w-full text-sm border border-neutral-300 rounded p-2 focus:ring-2 focus:ring-blue-500 outline-none"
+                      />
+                    </div>
+                    <div className="pt-2 border-t border-neutral-200 flex flex-col gap-2">
+                       <button type="button" onClick={() => handleRegenerateId(tv.id)} className="w-full text-left px-3 py-2 text-sm font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 rounded flex items-center gap-2 transition-colors">
+                         <RefreshCcw className="w-4 h-4" /> Réinitialiser l'Identifiant (ID)
+                       </button>
+                       <button type="button" onClick={() => handleRegenerateCode(tv.id)} className="w-full text-left px-3 py-2 text-sm font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 rounded flex items-center gap-2 transition-colors">
+                         <KeyRound className="w-4 h-4" /> Réinitialiser le Code d'accès
+                       </button>
+                    </div>
+                    <div className="flex justify-end gap-2 pt-2">
+                      <button type="button" onClick={() => setEditingTV(null)} className="px-3 py-1.5 text-sm font-medium text-neutral-600 hover:bg-neutral-100 rounded">
+                        Annuler
+                      </button>
+                      <button type="submit" className="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded">
+                        Enregistrer
+                      </button>
+                    </div>
+                  </form>
                 </div>
-                <div className="flex items-center gap-3">
-                  <a 
-                    href={`/#/tv/client/${tv.id}?code=${tv.code}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    onClick={(e) => e.stopPropagation()}
-                    className="p-1.5 text-neutral-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                    title="Ouvrir le navigateur TV"
-                  >
-                    <ExternalLink className="w-4 h-4" />
-                  </a>
-                  <span className={cn(
-                    "text-xs px-2 py-1 rounded-full font-medium inline-flex items-center gap-1.5",
-                    tv.status === 'ONLINE' ? "bg-green-100 text-green-700" : "bg-neutral-100 text-neutral-600"
-                  )}>
-                    <span className={cn(
-                      "w-1.5 h-1.5 rounded-full",
-                      tv.status === 'ONLINE' ? "bg-green-500" : "bg-neutral-400"
-                    )}></span>
-                    {tv.status}
-                  </span>
-                </div>
-              </div>
-              
-              <div className="mt-4 flex items-center justify-between">
-                <div className="text-sm">
-                  <span className="text-neutral-500">Contenu actuel : </span>
-                  {tv.currentSlide ? (
-                    <span className="font-medium text-neutral-900">{tv.currentSlide.title}</span>
-                  ) : (
-                    <span className="text-neutral-400 italic">Aucun contenu</span>
-                  )}
-                </div>
-                
-                {/* Simulated Viewer Launcher */}
-                <a 
-                  href={`/#/login-tv`} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center gap-1"
-                  onClick={(e) => { e.stopPropagation(); }}
-                >
-                  <ExternalLink className="w-4 h-4" />
-                  Lien Connexion
-                </a>
-              </div>
+              ) : (
+                <>
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <h4 className="font-medium text-neutral-900 flex items-center gap-2">
+                        <MonitorPlay className="w-4 h-4 text-neutral-500" />
+                        {tv.name}
+                      </h4>
+                      <p className="text-xs text-neutral-500 mt-1">ID: {tv.id} &bull; {tv.location} &bull; Code: {tv.code}</p>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setEditingTV({ id: tv.id, originalId: tv.id, name: tv.name, location: tv.location || '' })}}
+                        className="p-1.5 text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 rounded transition-colors"
+                        title="Configuration"
+                      >
+                        <Settings className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleDeleteTV(tv.id) }}
+                        className="p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                        title="Supprimer"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                      <a 
+                        href={`/#/tv/client/${tv.id}?code=${tv.code}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="p-1.5 text-neutral-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                        title="Ouvrir le navigateur web (Lien Direct)"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                      </a>
+                      <span className={cn(
+                        "ml-1.5 text-xs px-2 py-1 rounded-full font-medium inline-flex items-center gap-1.5",
+                        tv.status === 'ONLINE' ? "bg-green-100 text-green-700" : "bg-neutral-100 text-neutral-600"
+                      )}>
+                        <span className={cn(
+                          "w-1.5 h-1.5 rounded-full",
+                          tv.status === 'ONLINE' ? "bg-green-500" : "bg-neutral-400"
+                        )}></span>
+                        {tv.status}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-4 flex items-center justify-between">
+                    <div className="text-sm">
+                      <span className="text-neutral-500">Contenu actuel : </span>
+                      {tv.currentSlide ? (
+                        <span className="font-medium text-neutral-900">{tv.currentSlide.title}</span>
+                      ) : (
+                        <span className="text-neutral-400 italic">Aucun contenu</span>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           ))}
         </div>
