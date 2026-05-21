@@ -22,6 +22,7 @@ export default function ScreensManager() {
   const [newTVDetails, setNewTVDetails] = useState({ name: '', location: '' });
   const [generatedTV, setGeneratedTV] = useState<{ id: string; code: string } | null>(null);
   const [editingTV, setEditingTV] = useState<{ id: string; originalId: string; name: string; location: string } | null>(null);
+  const [confirmAction, setConfirmAction] = useState<{ type: 'delete' | 'reset-id' | 'reset-code', tvId: string } | null>(null);
 
   const handleSendSlide = async (slide: Slide | null) => {
     if (selectedTV) {
@@ -113,29 +114,39 @@ export default function ScreensManager() {
   };
 
   const handleRegenerateCode = (tvId: string) => {
-    if (confirm("Voulez-vous vraiment générer un nouveau code d'accès pour cet écran ? Les accès actuels seront révoqués.")) {
-      const newCode = Math.floor(100000 + Math.random() * 900000).toString();
-      updateTV(tvId, { code: newCode });
-      alert(`Nouveau code généré : ${newCode}`);
-    }
+    setConfirmAction({ type: 'reset-code', tvId });
   };
 
   const handleRegenerateId = (tvId: string) => {
-    if (confirm("Voulez-vous vraiment générer un nouvel identifiant (ID) pour cet écran ? Les liens existants ne fonctionneront plus.")) {
-      const newId = `TV-${Math.random().toString(36).substring(2, 6).toUpperCase()}-${Math.floor(100 + Math.random() * 900)}`;
-      updateTV(tvId, { id: newId });
-      alert(`Nouvel identifiant généré : ${newId}`);
-      if (selectedTV === tvId) {
-        setSelectedTV(newId);
-      }
-    }
+    setConfirmAction({ type: 'reset-id', tvId });
   };
 
   const handleDeleteTV = (tvId: string) => {
-    if (confirm("Voulez-vous vraiment supprimer cet écran ?")) {
-      deleteTV(tvId);
-      if (selectedTV === tvId) setSelectedTV(null);
+    setConfirmAction({ type: 'delete', tvId });
+  };
+
+  const executeConfirmAction = () => {
+    if (!confirmAction) return;
+
+    if (confirmAction.type === 'delete') {
+      deleteTV(confirmAction.tvId);
+      if (selectedTV === confirmAction.tvId) setSelectedTV(null);
+    } 
+    else if (confirmAction.type === 'reset-code') {
+      const newCode = Math.floor(100000 + Math.random() * 900000).toString();
+      updateTV(confirmAction.tvId, { code: newCode });
     }
+    else if (confirmAction.type === 'reset-id') {
+      const newId = `TV-${Math.random().toString(36).substring(2, 6).toUpperCase()}-${Math.floor(100 + Math.random() * 900)}`;
+      updateTV(confirmAction.tvId, { id: newId });
+      if (selectedTV === confirmAction.tvId) {
+        setSelectedTV(newId);
+      }
+      if (editingTV && editingTV.originalId === confirmAction.tvId) {
+        setEditingTV({ ...editingTV, id: newId, originalId: newId });
+      }
+    }
+    setConfirmAction(null);
   };
 
   return (
@@ -229,6 +240,42 @@ export default function ScreensManager() {
                 </div>
               </form>
             )}
+          </div>
+        )}
+
+        {/* Confirmation Modal */}
+        {confirmAction && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden relative animate-in fade-in zoom-in duration-200">
+              <div className="p-6">
+                <h3 className="text-xl font-bold text-neutral-900 mb-2">
+                  {confirmAction.type === 'delete' ? 'Supprimer l\'écran' : 
+                   confirmAction.type === 'reset-id' ? 'Réinitialiser l\'ID' : 'Réinitialiser le code'}
+                </h3>
+                <p className="text-neutral-500 mb-6 text-sm">
+                  {confirmAction.type === 'delete' ? 'Voulez-vous vraiment supprimer cet écran ? Cette action est irréversible.' : 
+                   confirmAction.type === 'reset-id' ? 'Voulez-vous vraiment générer un nouvel identifiant (ID) pour cet écran ? Les liens d\'accès existants ne fonctionneront plus.' : 
+                   'Voulez-vous vraiment générer un nouveau code d\'accès pour cet écran ? Les sessions actuelles pourraient être déconnectées.'}
+                </p>
+                <div className="flex justify-end gap-3">
+                  <button 
+                    onClick={() => setConfirmAction(null)}
+                    className="px-4 py-2 font-medium text-neutral-600 hover:bg-neutral-100 rounded-lg transition-colors"
+                  >
+                    Annuler
+                  </button>
+                  <button 
+                    onClick={executeConfirmAction}
+                    className={cn(
+                      "px-4 py-2 font-medium text-white rounded-lg transition-colors",
+                      confirmAction.type === 'delete' ? "bg-red-600 hover:bg-red-700" : "bg-amber-600 hover:bg-amber-700"
+                    )}
+                  >
+                    Confirmer
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
