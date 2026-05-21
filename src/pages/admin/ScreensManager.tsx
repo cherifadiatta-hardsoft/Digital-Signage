@@ -294,6 +294,28 @@ export default function ScreensManager() {
               {editingTV && editingTV.originalId === tv.id ? (
                 <div onClick={(e) => e.stopPropagation()} className="space-y-4">
                   <h4 className="font-medium text-sm text-neutral-800">Configuration de l'écran</h4>
+                  
+                  <div className="bg-blue-50/50 rounded-lg p-3 border border-blue-100 flex flex-col gap-2">
+                    <div className="flex justify-between items-center text-sm">
+                       <span className="text-neutral-500 font-medium">Identifiant (ID)</span>
+                       <span className="font-mono font-bold text-neutral-900 bg-white px-2 py-1 rounded border border-neutral-200 select-all">{tv.id}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm">
+                       <span className="text-neutral-500 font-medium">Code d'accès</span>
+                       <span className="font-mono font-bold text-blue-600 bg-white px-2 py-1 rounded border border-blue-100 select-all">{tv.code}</span>
+                    </div>
+                    {/* Add quick copy link */}
+                    <div className="pt-2 mt-1 border-t border-blue-100 text-xs">
+                       <input 
+                         readOnly 
+                         value={`${window.location.origin}/#/tv/client/${tv.id}?code=${tv.code}`} 
+                         className="w-full text-xs font-mono p-1.5 bg-white border border-blue-200 rounded outline-none text-neutral-500"
+                         onClick={(e) => (e.target as HTMLInputElement).select()}
+                         title="Lien d'accès direct"
+                       />
+                    </div>
+                  </div>
+
                   <form onSubmit={handleUpdateTV} className="space-y-3">
                     <div>
                       <label className="block text-xs font-medium text-neutral-500 mb-1">Nom</label>
@@ -316,10 +338,10 @@ export default function ScreensManager() {
                     </div>
                     <div className="pt-2 border-t border-neutral-200 flex flex-col gap-2">
                        <button type="button" onClick={() => handleRegenerateId(tv.id)} className="w-full text-left px-3 py-2 text-sm font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 rounded flex items-center gap-2 transition-colors">
-                         <RefreshCcw className="w-4 h-4" /> Réinitialiser l'Identifiant (ID)
+                         <RefreshCcw className="w-4 h-4" /> Régénérer l'Identifiant (ID)
                        </button>
                        <button type="button" onClick={() => handleRegenerateCode(tv.id)} className="w-full text-left px-3 py-2 text-sm font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 rounded flex items-center gap-2 transition-colors">
-                         <KeyRound className="w-4 h-4" /> Réinitialiser le Code d'accès
+                         <KeyRound className="w-4 h-4" /> Régénérer le Code d'accès
                        </button>
                     </div>
                     <div className="flex justify-end gap-2 pt-2">
