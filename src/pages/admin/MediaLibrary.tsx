@@ -1,18 +1,47 @@
 import { useState } from 'react';
 import { useStore } from '../../store/useStore';
-import { Plus, Image as ImageIcon, FileText, Clock } from 'lucide-react';
+import { Plus, Image as ImageIcon, FileText, Clock, Sparkles, Loader2 } from 'lucide-react';
 
 export default function MediaLibrary() {
   const slides = useStore((state) => state.slides);
   const addSlide = useStore((state) => state.addSlide);
 
   const [isAdding, setIsAdding] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState('');
   const [newSlide, setNewSlide] = useState({
     title: '',
     type: 'image' as const,
     content: '',
     duration: 10,
   });
+
+  const handleGenerateAI = async () => {
+    if (!aiPrompt) return;
+    setIsGenerating(true);
+    try {
+      const response = await fetch('/api/generate-slide', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: aiPrompt })
+      });
+      
+      const data = await response.json();
+      if (response.ok) {
+        setNewSlide({
+          ...newSlide,
+          type: 'text',
+          content: data.text
+        });
+      } else {
+        alert("Erreur: " + data.error);
+      }
+    } catch (err) {
+      alert("Erreur de connexion au serveur AI");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,6 +58,7 @@ export default function MediaLibrary() {
     
     setIsAdding(false);
     setNewSlide({ title: '', type: 'image', content: '', duration: 10 });
+    setAiPrompt('');
   };
 
   return (
@@ -75,6 +105,32 @@ export default function MediaLibrary() {
               </select>
             </div>
 
+            {newSlide.type === 'text' && (
+              <div className="col-span-2 bg-gradient-to-r from-indigo-50 to-purple-50 p-4 rounded-lg border border-indigo-100 mb-2">
+                <label className="text-sm font-medium text-indigo-900 flex items-center gap-1.5 mb-2">
+                  <Sparkles className="w-4 h-4 text-indigo-600" /> Génération par IA (Gemini)
+                </label>
+                <div className="flex gap-2">
+                  <input 
+                    type="text" 
+                    value={aiPrompt}
+                    onChange={e => setAiPrompt(e.target.value)}
+                    placeholder="Ex: Génère une annonce publicitaire courte pour une boulangerie"
+                    className="flex-1 border border-indigo-200 bg-white rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+                  />
+                  <button 
+                    type="button" 
+                    onClick={handleGenerateAI}
+                    disabled={isGenerating || !aiPrompt}
+                    className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white px-4 py-2 rounded-md font-medium text-sm flex items-center gap-2 transition-colors"
+                  >
+                    {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                    Générer
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="col-span-2 space-y-1">
               <label className="text-sm font-medium text-neutral-700">
                 {newSlide.type === 'image' ? 'URL de l\'image' : 'Contenu du texte'}
@@ -84,7 +140,7 @@ export default function MediaLibrary() {
                   value={newSlide.content}
                   onChange={e => setNewSlide({...newSlide, content: e.target.value})}
                   className="w-full border border-neutral-300 rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                  rows={3}
+                  rows={4}
                   required
                 />
               ) : (

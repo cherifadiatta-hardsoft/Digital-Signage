@@ -3,9 +3,24 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import { createServer } from "http";
 import { Server } from "socket.io";
+import { GoogleGenAI } from "@google/genai";
+
+let ai: GoogleGenAI | null = null;
+if (process.env.GEMINI_API_KEY) {
+  ai = new GoogleGenAI({
+    apiKey: process.env.GEMINI_API_KEY,
+    httpOptions: {
+      headers: {
+        'User-Agent': 'aistudio-build',
+      }
+    }
+  });
+}
 
 async function startServer() {
   const app = express();
+  app.use(express.json());
+
   const httpServer = createServer(app);
   const io = new Server(httpServer, {
     cors: {
@@ -59,6 +74,33 @@ async function startServer() {
   // API Health
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok" });
+  });
+
+  // Generate slide text using Gemini AI
+  app.post("/api/generate-slide", async (req, res) => {
+    try {
+      if (!ai) {
+        return res.status(500).json({ error: "Gemini API key is not configured on the server." });
+      }
+      
+      const { prompt } = req.body;
+      if (!prompt) {
+        return res.status(400).json({ error: "Prompt is required" });
+      }
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3.5-flash",
+        contents: prompt,
+        config: {
+          systemInstruction: "You are a creative copywriter generating punchy, concise, and attractive text for a digital signage smart TV display. Generate ONLY the text to display. Be concise and impactful. Maximum 1-3 short sentences. No formatting, no extra explanation.",
+        }
+      });
+
+      res.json({ text: response.text });
+    } catch (error: any) {
+      console.error("Gemini AI error:", error);
+      res.status(500).json({ error: error.message || "Failed to generate text" });
+    }
   });
 
   // Vite middleware for development

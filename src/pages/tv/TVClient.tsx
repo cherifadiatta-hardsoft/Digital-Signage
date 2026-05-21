@@ -70,7 +70,7 @@ export default function TVClient() {
 
   if (!initialTv) {
     return (
-      <div className="fixed inset-0 flex items-center justify-center bg-black text-white font-sans m-0 p-0">
+      <div className="fixed top-0 left-0 w-screen h-screen flex items-center justify-center bg-black text-white font-sans m-0 p-0 overflow-hidden">
         <div className="text-center">
           <div className="border border-neutral-600 rounded-lg p-3 inline-block mb-6">
             <MonitorPlay className="w-16 h-16 text-neutral-600" />
@@ -85,7 +85,7 @@ export default function TVClient() {
   const slide = activeSlide;
 
   return (
-    <div className="fixed inset-0 bg-neutral-950 overflow-hidden text-white font-sans select-none cursor-none flex flex-col items-center justify-center p-8">
+    <div className="fixed top-0 left-0 w-screen h-screen bg-neutral-950 overflow-hidden text-white font-sans select-none cursor-none flex flex-col items-center justify-center p-0 m-0">
       {/* If there is a slide displaying */}
       {slide ? (
         <div className="absolute inset-0 w-full h-full">

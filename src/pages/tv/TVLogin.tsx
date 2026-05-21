@@ -37,7 +37,7 @@ export default function TVLogin() {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-950 flex flex-col items-center justify-center p-6 text-white font-sans">
+    <div className="fixed top-0 left-0 w-screen h-screen bg-neutral-950 flex flex-col items-center justify-center p-6 text-white font-sans overflow-hidden">
       <div className="w-full max-w-[450px]">
         <div className="text-center mb-10">
           <div className="w-20 h-20 bg-neutral-900 border border-neutral-800 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-2xl">
