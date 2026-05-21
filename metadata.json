@@ -1,0 +1,6 @@
+{
+  "name": "HardSoft Smart Display",
+  "description": "Plateforme centralisée de Digital Signage Cloud pour contrôler plusieurs Smart TVs à distance, avec tableau de bord administrateur et client TV.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
