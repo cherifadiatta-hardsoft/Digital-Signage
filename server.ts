@@ -31,38 +31,103 @@ async function startServer() {
 
   const PORT = 3000;
 
-  // TV WebSocket State
+  // TV WebSocket State and Cache
   const tvClients = new Map<string, string>(); // socket.id -> tvId
+  const currentSlides = new Map<string, any>(); // tvId -> Slide
+  let globalSlide: any = null;
   
   io.on("connection", (socket) => {
     console.log("Client connected:", socket.id);
-
-    // TV connects
-    socket.on("register_tv", (tvId: string) => {
-      if (!tvId || typeof tvId !== 'string') return;
-      console.log(`TV Registered: ${tvId}`);
+ 
+    // TV connects - supports both 'register_tv' and 'register-tv'
+    const registerTvHandler = (tvIdData: any) => {
+      let tvId: string | null = null;
+      if (typeof tvIdData === 'string') {
+        tvId = tvIdData;
+      } else if (tvIdData && typeof tvIdData === 'object' && typeof tvIdData.tvId === 'string') {
+        tvId = tvIdData.tvId;
+      }
+      
+      if (!tvId) return;
+      console.log(`TV Registered (event trigger): ${tvId}`);
       tvClients.set(socket.id, tvId);
       socket.join(`tv_${tvId}`);
       io.emit("tv_online", tvId); // Notify admin dashboard
-    });
 
-    // Admin updates a tv slide
-    socket.on("update_slide", ({ tvId, slide }) => {
-      if (!tvId || typeof tvId !== 'string') return;
-      console.log(`Updating slide for TV: ${tvId}`);
-      if (tvId === "ALL") {
-        io.emit("slide_updated", slide);
-      } else {
-        io.to(`tv_${tvId}`).emit("slide_updated", slide);
+      // Immediately send active slide if we have it cached on the server back-channel
+      const activeSlide = currentSlides.has(tvId) ? currentSlides.get(tvId) : globalSlide;
+      if (activeSlide !== undefined && activeSlide !== null) {
+         console.log(`Sending immediate active slide to TV ${tvId}:`, activeSlide.title || activeSlide);
+         socket.emit("slide_updated", activeSlide);
+         socket.emit("display-slide", {
+           id: activeSlide.id,
+           title: activeSlide.title,
+           type: activeSlide.type,
+           url: activeSlide.content,
+           content: activeSlide.content,
+           duration: activeSlide.duration
+         });
       }
-    });
+    };
 
+    socket.on("register_tv", registerTvHandler);
+    socket.on("register-tv", registerTvHandler);
+ 
+    // Admin updates a tv slide - support both 'update_slide' and 'update-slide'
+    const updateSlideHandler = (data: any) => {
+      if (!data || typeof data !== 'object') return;
+      const { tvId, slide } = data;
+      if (!tvId || typeof tvId !== 'string') return;
+      console.log(`Updating slide on server map for TV: ${tvId}`, slide?.title || 'None/Stopped');
+      
+      let normalizedSlide = slide;
+      // If the slide has custom properties like url instead of content
+      if (slide && !slide.content && slide.url) {
+        normalizedSlide = {
+          id: slide.id || 'slide-' + Date.now(),
+          title: slide.title || 'Slide de passage',
+          type: slide.type || 'image',
+          content: slide.url,
+          duration: slide.duration || 10,
+          createdAt: new Date().toISOString()
+        };
+      }
+
+      if (tvId === "ALL") {
+        globalSlide = normalizedSlide;
+        for (const [sid, tid] of tvClients.entries()) {
+          currentSlides.set(tid, normalizedSlide);
+        }
+        io.emit("slide_updated", normalizedSlide);
+        io.emit("display-slide", slide);
+      } else {
+        currentSlides.set(tvId, normalizedSlide);
+        io.to(`tv_${tvId}`).emit("slide_updated", normalizedSlide);
+        
+        if (normalizedSlide) {
+          io.to(`tv_${tvId}`).emit("display-slide", {
+            id: normalizedSlide.id,
+            title: normalizedSlide.title,
+            type: normalizedSlide.type,
+            url: normalizedSlide.content,
+            content: normalizedSlide.content,
+            duration: normalizedSlide.duration
+          });
+        } else {
+          io.to(`tv_${tvId}`).emit("display-slide", null);
+        }
+      }
+    };
+
+    socket.on("update_slide", updateSlideHandler);
+    socket.on("update-slide", updateSlideHandler);
+ 
     // Heartbeat from TVs
     socket.on("heartbeat", (tvId: string) => {
       if (!tvId || typeof tvId !== 'string') return;
       io.emit("tv_online", tvId); // Forward to admin
     });
-
+ 
     socket.on("disconnect", () => {
       const tvId = tvClients.get(socket.id);
       if (tvId) {

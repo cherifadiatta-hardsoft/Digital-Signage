@@ -11,10 +11,8 @@ export default function TVClient() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [currentTime, setCurrentTime] = useState(new Date());
   
-  const initialTv = useStore((state) => state.tvs.find(t => t.id === id));
-  
-  // Local state for instant reaction
-  const [activeSlide, setActiveSlide] = useState<Slide | null>(initialTv?.currentSlide || null);
+  const tv = useStore((state) => state.tvs.find(t => t.id === id));
+  const activeSlide = tv?.currentSlide || null;
   const [isConnected, setIsConnected] = useState(false);
 
   // Authentication Check
@@ -22,16 +20,16 @@ export default function TVClient() {
     const savedToken = localStorage.getItem('tv_auth_token');
     const code = searchParams.get('code');
 
-    if (code && initialTv && initialTv.code === code) {
+    if (code && tv && tv.code === code) {
       // Auto login based on URL link correctly mapping code to TV
-      localStorage.setItem('tv_auth_token', initialTv.id);
+      localStorage.setItem('tv_auth_token', tv.id);
       // Remove code from url
       searchParams.delete('code');
       setSearchParams(searchParams, { replace: true });
     } else if (savedToken !== id) {
       navigate('/login-tv');
     }
-  }, [id, navigate, searchParams, setSearchParams, initialTv]);
+  }, [id, navigate, searchParams, setSearchParams, tv]);
 
   // Clock
   useEffect(() => {
@@ -43,13 +41,24 @@ export default function TVClient() {
   useEffect(() => {
     if (!id) return;
     
-    // Connect to same origin
-    const socket: Socket = io(window.location.origin);
+    // Connect to same origin with transports fallback
+    const socket: Socket = io(window.location.origin, {
+      transports: ['websocket', 'polling'],
+      reconnection: true
+    });
     
+    // Log all events instantly to browser console for easy test feedback
+    socket.onAny((event, data) => {
+       console.log("WebSocket Event Received:", event, data);
+    });
+
     socket.on('connect', () => {
-       console.log('Connected to central server, registering TV...');
+       console.log('Connected to central server, registering TV with ID:', id);
        setIsConnected(true);
+       
+       // Support both string registration format and object structure
        socket.emit('register_tv', id);
+       socket.emit('register-tv', { tvId: id });
     });
 
     socket.on('disconnect', () => {
@@ -58,24 +67,58 @@ export default function TVClient() {
     });
 
     socket.on('slide_updated', (slide: Slide | null) => {
-       console.log('Received slide update:', slide);
-       setActiveSlide(slide);
-       useStore.getState().assignSlideToTV(id, slide); // Persist across reloads
+       console.log('Received slide update (slide_updated):', slide);
+       useStore.getState().assignSlideToTV(id, slide); // Persist across reloads reactively
+    });
+
+    // Also support display-slide or display_slide standard layouts
+    socket.on('display-slide', (data: any) => {
+       console.log('Received display-slide payload:', data);
+       if (data) {
+         const slide: Slide = {
+           id: data.id || 'slide-' + Date.now(),
+           title: data.title || 'Slide de passage',
+           type: data.type || 'image',
+           content: data.url || data.content || '',
+           duration: data.duration || 10,
+           createdAt: new Date().toISOString()
+         };
+         useStore.getState().assignSlideToTV(id, slide);
+       } else {
+         useStore.getState().assignSlideToTV(id, null);
+       }
+    });
+
+    socket.on('display_slide', (data: any) => {
+       console.log('Received display_slide payload:', data);
+       if (data) {
+         const slide: Slide = {
+           id: data.id || 'slide-' + Date.now(),
+           title: data.title || 'Slide de passage',
+           type: data.type || 'image',
+           content: data.url || data.content || '',
+           duration: data.duration || 10,
+           createdAt: new Date().toISOString()
+         };
+         useStore.getState().assignSlideToTV(id, slide);
+       } else {
+         useStore.getState().assignSlideToTV(id, null);
+       }
     });
 
     const interval = setInterval(() => {
-      if (socket.connected) {
-         socket.emit('heartbeat', id);
-      }
+       if (socket.connected) {
+          socket.emit('heartbeat', id);
+       }
     }, 5000);
 
     return () => {
-      clearInterval(interval);
-      socket.disconnect();
+       clearInterval(interval);
+       socket.disconnect();
     };
   }, [id]);
 
-  if (!initialTv) {
+  if (!tv) {
     return (
       <div className="fixed top-0 left-0 w-screen h-screen flex items-center justify-center bg-black text-white font-sans m-0 p-0 overflow-hidden">
         <div className="text-center">
@@ -101,6 +144,7 @@ export default function TVClient() {
               src={slide.content} 
               alt={slide.title} 
               className="w-full h-full object-cover"
+              referrerPolicy="no-referrer"
             />
           )}
           {slide.type === 'text' && (
@@ -119,7 +163,7 @@ export default function TVClient() {
             <div>
               <h1 className="text-5xl md:text-8xl font-bold tracking-tight leading-none mb-2 md:mb-4">HardSoft TV</h1>
               <p className="text-2xl md:text-4xl text-blue-400 font-medium tracking-widest uppercase">
-                {initialTv.name}
+                {tv.name}
               </p>
             </div>
           </div>
@@ -128,8 +172,8 @@ export default function TVClient() {
             <p className="text-neutral-400 text-lg md:text-2xl uppercase tracking-wider mb-2">
               Identifiant de connexion
             </p>
-            <p className="text-3xl md:text-5xl font-mono font-bold text-white tracking-widest bg-white/10 px-6 py-4 md:px-8 md:py-6 rounded-2xl border border-white/10 inline-block">
-              {initialTv.id}
+            <p className="text-3xl md:text-5xl font-mono font-bold text-white tracking-widest bg-white/10 px-6 py-4 md:px-8 md:py-6 rounded-2xl border border-white/10 inline-block font-sans">
+              {tv.id}
             </p>
           </div>
 

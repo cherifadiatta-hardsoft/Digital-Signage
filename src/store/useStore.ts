@@ -12,6 +12,8 @@ interface AppState {
   assignSlideToTV: (tvId: string, slide: Slide | null) => void;
   assignPlaylistToTV: (tvId: string, playlistId: string | null) => void;
   addSlide: (slide: Slide) => void;
+  updateSlide: (id: string, updates: Partial<Slide>) => void;
+  deleteSlide: (id: string) => void;
   addTV: (tv: SmartTV) => void;
   updateTV: (oldId: string, updates: Partial<SmartTV>) => void;
   deleteTV: (id: string) => void;
@@ -42,6 +44,24 @@ export const useStore = create<AppState>()(
 
       addSlide: (slide) => set((state) => ({
         slides: [...state.slides, slide]
+      })),
+
+      updateSlide: (id, updates) => set((state) => ({
+        slides: state.slides.map((s) => s.id === id ? { ...s, ...updates } : s),
+        // If the edited slide is currently active on any TV, update it there too
+        tvs: state.tvs.map((tv) => tv.currentSlide?.id === id 
+          ? { ...tv, currentSlide: { ...tv.currentSlide, ...updates } } 
+          : tv
+        )
+      })),
+
+      deleteSlide: (id) => set((state) => ({
+        slides: state.slides.filter((s) => s.id !== id),
+        // Clean from active TVs if deleted
+        tvs: state.tvs.map((tv) => tv.currentSlide?.id === id 
+          ? { ...tv, currentSlide: null } 
+          : tv
+        )
       })),
 
       addTV: (tv) => set((state) => ({
