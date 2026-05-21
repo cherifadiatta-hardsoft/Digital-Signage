@@ -1,24 +1,36 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useStore } from '../../store/useStore';
 import { MonitorPlay } from 'lucide-react';
+import { Slide } from '../../types';
+import { supabase } from '../../lib/supabaseClient';
 
 export default function TVClient() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [currentTime, setCurrentTime] = useState(new Date());
   
-  const tv = useStore((state) => state.tvs.find(t => t.id === id));
-  const tvHeartbeat = useStore((state) => state.tvHeartbeat);
+  const initialTv = useStore((state) => state.tvs.find(t => t.id === id));
+  
+  // Local state for instant reaction
+  const [activeSlide, setActiveSlide] = useState<Slide | null>(initialTv?.currentSlide || null);
 
   // Authentication Check
   useEffect(() => {
     const savedToken = localStorage.getItem('tv_auth_token');
-    if (savedToken !== id) {
-      // If not authenticated for this specific TV, redirect to login
+    const code = searchParams.get('code');
+
+    if (code && initialTv && initialTv.code === code) {
+      // Auto login based on URL link correctly mapping code to TV
+      localStorage.setItem('tv_auth_token', initialTv.id);
+      // Remove code from url
+      searchParams.delete('code');
+      setSearchParams(searchParams, { replace: true });
+    } else if (savedToken !== id) {
       navigate('/login-tv');
     }
-  }, [id, navigate]);
+  }, [id, navigate, searchParams, setSearchParams, initialTv]);
 
   // Clock
   useEffect(() => {
@@ -26,18 +38,90 @@ export default function TVClient() {
     return () => clearInterval(timer);
   }, []);
 
-  // Heartbeat to let Admin know this TV is online
+  // Realtime listener mechanism (BroadcastChannel + Supabase fallback)
   useEffect(() => {
-    if (id) {
-      tvHeartbeat(id);
-      const interval = setInterval(() => {
-        tvHeartbeat(id);
-      }, 5000); // 5 second heartbeat
-      return () => clearInterval(interval);
-    }
-  }, [id, tvHeartbeat]);
+    // 1. BroadcastChannel (Local Preview sync)
+    const channel = new BroadcastChannel('hardsoft_tv_channel');
 
-  if (!tv) {
+    // Announce presence (heartbeat) without direct store mutation on client to prevent race conditions
+    const emitHeartbeat = () => {
+      if (id) {
+        channel.postMessage({ type: 'PING', tvId: id });
+      }
+    };
+
+    emitHeartbeat();
+    const interval = setInterval(emitHeartbeat, 5000);
+
+    channel.onmessage = (event) => {
+      if (event.data.type === 'UPDATE_SLIDE') {
+        if (event.data.tvId === id || event.data.tvId === 'ALL') {
+          setActiveSlide(event.data.slide);
+        }
+      }
+    };
+
+    // 2. Supabase Integration (Production sync)
+    let supabaseChannel: any = null;
+    
+    if (supabase && id) {
+      const fetchInitialData = async () => {
+        const { data, error } = await supabase
+          .from('tv_control')
+          .select('current_slide_url')
+          .eq('tv_id', id)
+          .single();
+        
+        if (data && data.current_slide_url) {
+          try {
+            setActiveSlide(JSON.parse(data.current_slide_url));
+          } catch (e) {
+            console.error('Invalid slide data in Supabase');
+          }
+        }
+      };
+
+      fetchInitialData();
+
+      supabaseChannel = supabase
+        .channel(`schema-db-changes-${id}`)
+        .on('postgres_changes', { 
+          event: 'UPDATE', 
+          schema: 'public', 
+          table: 'tv_control', 
+          filter: `tv_id=eq.${id}` 
+        }, (payload: any) => {
+          if (payload.new && payload.new.current_slide_url) {
+            try {
+              setActiveSlide(JSON.parse(payload.new.current_slide_url));
+            } catch (e) {
+               console.error('Invalid slide data received from Supabase');
+            }
+          } else {
+            setActiveSlide(null); // Clear slide
+          }
+        })
+        .subscribe();
+    }
+
+    return () => {
+      clearInterval(interval);
+      channel.close();
+      if (supabaseChannel) {
+        supabase.removeChannel(supabaseChannel);
+      }
+    };
+  }, [id]);
+
+  // Fallback sync with global store if changed via other means
+  useEffect(() => {
+    // Only trust the store if supabase isn't active/primary for truth
+    if (!supabase) {
+      setActiveSlide(initialTv?.currentSlide || null);
+    }
+  }, [initialTv?.currentSlide]);
+
+  if (!initialTv) {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-black text-white">
         <div className="text-center">
@@ -49,7 +133,7 @@ export default function TVClient() {
     );
   }
 
-  const slide = tv.currentSlide;
+  const slide = activeSlide;
 
   return (
     <div className="flex h-screen w-screen bg-black overflow-hidden relative selection:bg-transparent cursor-none">
@@ -78,14 +162,14 @@ export default function TVClient() {
             <MonitorPlay className="w-20 h-20 text-blue-500" />
             <div>
               <h1 className="text-6xl font-bold tracking-tight">HardSoft TV</h1>
-              <p className="text-2xl text-blue-400 font-medium tracking-widest mt-2 uppercase">{tv.name}</p>
+              <p className="text-2xl text-blue-400 font-medium tracking-widest mt-2 uppercase">{initialTv.name}</p>
             </div>
           </div>
           
           <div className="absolute bottom-12 left-12 text-left">
             <p className="text-neutral-500 text-lg uppercase tracking-wider mb-1">Identifiant de connexion</p>
             <p className="text-4xl font-mono font-bold text-white tracking-widest bg-white/10 px-6 py-3 rounded-xl backdrop-blur-sm border border-white/10 shadow-2xl inline-block">
-              {tv.id}
+              {initialTv.id}
             </p>
           </div>
 

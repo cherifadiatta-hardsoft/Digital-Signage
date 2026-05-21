@@ -1,9 +1,22 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { LayoutDashboard, MonitorPlay, Image as ImageIcon, Settings } from 'lucide-react';
+import { useEffect } from 'react';
+import { useStore } from '../../store/useStore';
 import { cn } from '../../lib/utils';
 
 export default function AdminLayout() {
   const location = useLocation();
+  const tvHeartbeat = useStore((state) => state.tvHeartbeat);
+
+  useEffect(() => {
+    const channel = new BroadcastChannel('hardsoft_tv_channel');
+    channel.onmessage = (event) => {
+      if (event.data.type === 'PING') {
+        tvHeartbeat(event.data.tvId);
+      }
+    };
+    return () => channel.close();
+  }, [tvHeartbeat]);
 
   const navItems = [
     { name: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },

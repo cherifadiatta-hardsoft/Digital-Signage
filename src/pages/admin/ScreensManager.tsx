@@ -3,6 +3,7 @@ import { useStore } from '../../store/useStore';
 import { Send, MonitorPlay, ExternalLink, Plus, KeyRound, CheckCircle2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Slide } from '../../types';
+import { supabase } from '../../lib/supabaseClient';
 
 export default function ScreensManager() {
   const tvs = useStore((state) => state.tvs);
@@ -19,18 +20,60 @@ export default function ScreensManager() {
   const [newTVDetails, setNewTVDetails] = useState({ name: '', location: '' });
   const [generatedTV, setGeneratedTV] = useState<{ id: string; code: string } | null>(null);
 
-  const handleSendSlide = (slide: Slide) => {
+  const handleSendSlide = async (slide: Slide | null) => {
     if (selectedTV) {
       assignSlideToTV(selectedTV, slide);
-      setSentStatus(slide.id);
-      setTimeout(() => setSentStatus(null), 2000);
+      
+      // Local fallback sync
+      const channel = new BroadcastChannel('hardsoft_tv_channel');
+      channel.postMessage({ type: 'UPDATE_SLIDE', tvId: selectedTV, slide });
+      channel.close();
+      
+      // Production Supabase sync
+      if (supabase) {
+        await supabase
+          .from('tv_control')
+          .upsert({ 
+            tv_id: selectedTV, 
+            current_slide_url: slide ? JSON.stringify(slide) : null,
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'tv_id' });
+      }
+      
+      if (slide) {
+        setSentStatus(slide.id);
+        setTimeout(() => setSentStatus(null), 2000);
+      }
     }
   };
 
-  const handleBroadcast = (slide: Slide) => {
+  const handleBroadcast = async (slide: Slide | null) => {
     broadcastSlide(slide);
-    setSentStatus('broadcast-' + slide.id);
-    setTimeout(() => setSentStatus(null), 2000);
+    
+    // Local fallback sync
+    const channel = new BroadcastChannel('hardsoft_tv_channel');
+    channel.postMessage({ type: 'UPDATE_SLIDE', tvId: 'ALL', slide });
+    channel.close();
+
+    // Production Supabase sync
+    if (supabase) {
+      const activeTvs = tvs.filter(t => t.status === 'ONLINE').map(t => t.id);
+      
+      if (activeTvs.length > 0) {
+        const updates = activeTvs.map(tvId => ({
+          tv_id: tvId,
+          current_slide_url: slide ? JSON.stringify(slide) : null,
+          updated_at: new Date().toISOString()
+        }));
+
+        await supabase.from('tv_control').upsert(updates, { onConflict: 'tv_id' });
+      }
+    }
+
+    if (slide) {
+      setSentStatus('broadcast-' + slide.id);
+      setTimeout(() => setSentStatus(null), 2000);
+    }
   };
 
   const handleCreateTV = (e: React.FormEvent) => {
@@ -76,16 +119,38 @@ export default function ScreensManager() {
                 <MonitorPlay className="w-8 h-8 text-blue-500 mx-auto mb-2" />
                 <h4 className="font-bold text-neutral-900 mb-1">Écran Enregistré</h4>
                 <p className="text-sm text-neutral-500 mb-4">Entrez ces informations sur la Smart TV pour la connecter.</p>
-                <div className="inline-block text-left bg-neutral-50 px-6 py-4 rounded-xl border border-neutral-200 mb-4">
-                  <div className="mb-2">
-                    <span className="text-xs text-neutral-500 font-medium uppercase tracking-wider block mb-1">TV ID</span>
-                    <span className="font-mono font-bold text-lg text-neutral-900 tracking-wider font-medium">{generatedTV.id}</span>
+                <div className="inline-block text-left bg-neutral-50 px-6 py-4 rounded-xl border border-neutral-200 mb-4 w-full">
+                  <div className="mb-2 flex justify-between items-start">
+                    <div>
+                      <span className="text-xs text-neutral-500 font-medium uppercase tracking-wider block mb-1">TV ID</span>
+                      <span className="font-mono font-bold text-lg text-neutral-900 tracking-wider font-medium">{generatedTV.id}</span>
+                    </div>
                   </div>
-                  <div>
+                  <div className="mb-4">
                     <span className="text-xs text-neutral-500 font-medium uppercase tracking-wider block mb-1 flex items-center gap-1">
                       <KeyRound className="w-3 h-3" /> Code d'accès
                     </span>
                     <span className="font-mono font-bold text-2xl text-blue-600 tracking-wider">{generatedTV.code}</span>
+                  </div>
+                  <div className="pt-3 border-t border-neutral-200">
+                    <span className="text-xs text-neutral-500 font-medium uppercase tracking-wider block mb-2">Lien direct d'accès</span>
+                    <div className="flex items-center gap-2">
+                       <input 
+                         readOnly 
+                         value={`${window.location.origin}/tv/client/${generatedTV.id}?code=${generatedTV.code}`} 
+                         className="flex-1 text-xs font-mono p-2 bg-white border border-neutral-300 rounded outline-none"
+                         onClick={(e) => (e.target as HTMLInputElement).select()}
+                       />
+                       <a 
+                         href={`/tv/client/${generatedTV.id}?code=${generatedTV.code}`} 
+                         target="_blank" 
+                         rel="noreferrer"
+                         className="p-2 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded transition-colors"
+                         title="Ouvrir dans un nouvel onglet"
+                       >
+                         <ExternalLink className="w-4 h-4" />
+                       </a>
+                    </div>
                   </div>
                 </div>
                 <button 
@@ -147,6 +212,16 @@ export default function ScreensManager() {
                   <p className="text-xs text-neutral-500 mt-1">ID: {tv.id} &bull; {tv.location}</p>
                 </div>
                 <div className="flex items-center gap-3">
+                  <a 
+                    href={`/tv/client/${tv.id}?code=${tv.code}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="p-1.5 text-neutral-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                    title="Ouvrir le navigateur TV"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                  </a>
                   <span className={cn(
                     "text-xs px-2 py-1 rounded-full font-medium inline-flex items-center gap-1.5",
                     tv.status === 'ONLINE' ? "bg-green-100 text-green-700" : "bg-neutral-100 text-neutral-600"
@@ -252,7 +327,7 @@ export default function ScreensManager() {
                 
                 <div className="col-span-2 mt-4">
                    <button 
-                      onClick={() => assignSlideToTV(selectedTV, null)}
+                      onClick={() => handleSendSlide(null)}
                       className="w-full border-2 border-dashed border-red-200 text-red-600 hover:bg-red-50 py-3 rounded-lg text-sm font-medium transition-colors"
                     >
                       Arrêter la diffusion (Afficher Logo)
@@ -317,7 +392,7 @@ export default function ScreensManager() {
 
                 <div className="col-span-2 mt-4">
                    <button 
-                      onClick={() => broadcastSlide(null)}
+                      onClick={() => handleBroadcast(null)}
                       className="w-full border-2 border-dashed border-red-200 text-red-600 hover:bg-red-50 py-3 rounded-lg text-sm font-medium transition-colors"
                     >
                       Arrêter la diffusion globale (Afficher Logo)
