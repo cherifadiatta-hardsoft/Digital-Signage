@@ -12,7 +12,51 @@ export default function TVClient() {
   const [currentTime, setCurrentTime] = useState(new Date());
   
   const tv = useStore((state) => state.tvs.find(t => t.id === id));
-  const activeSlide = tv?.currentSlide || null;
+  const slides = useStore((state) => state.slides);
+  const schedules = useStore((state) => state.schedules);
+
+  // Evaluate scheduling if no manually forced slide is selected or broadcasted
+  const currentScheduledRule = (() => {
+    if (!id || !schedules || !slides) return null;
+    
+    const currentDay = currentTime.getDay(); // 0 = Sunday, 1 = Monday, etc.
+    const currentMinutes = currentTime.getHours() * 60 + currentTime.getMinutes();
+
+    // Filter schedules that match this specific TV (or ALL) and are active
+    const activeRules = schedules.filter(s => {
+      if (!s.isActive) return false;
+      if (s.tvId !== 'ALL' && s.tvId !== id) return false;
+      if (!s.daysOfWeek.includes(currentDay)) return false;
+
+      // Extract hours and minutes for start and end times
+      const [startH, startM] = s.startTime.split(':').map(Number);
+      const [endH, endM] = s.endTime.split(':').map(Number);
+      const startMin = startH * 60 + startM;
+      const endMin = endH * 60 + endM;
+
+      // Handle overnight runs
+      if (startMin <= endMin) {
+        return currentMinutes >= startMin && currentMinutes <= endMin;
+      } else {
+        return currentMinutes >= startMin || currentMinutes <= endMin;
+      }
+    });
+
+    if (activeRules.length > 0) {
+      // Prioritize specific TV schedules over ALL schedules
+      const specificRule = activeRules.find(r => r.tvId === id);
+      return specificRule || activeRules[0];
+    }
+
+    return null;
+  })();
+
+  const currentScheduledSlide = currentScheduledRule 
+    ? (slides.find(s => s.id === currentScheduledRule.slideId) || null)
+    : null;
+
+  const activeSlide = tv?.currentSlide || currentScheduledSlide || null;
+
   const [isConnected, setIsConnected] = useState(false);
 
   // Authentication Check
@@ -36,6 +80,20 @@ export default function TVClient() {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
+
+  // Prefetch and cache all image assets locally in the browser to prevent black/blank screens
+  useEffect(() => {
+    if (!slides || slides.length === 0) return;
+    
+    console.log('[Assets Preloader] Starting pre-cache downloads...');
+    slides.forEach((slide) => {
+      if (slide.type === 'image' && slide.content) {
+        const img = new Image();
+        img.referrerPolicy = "no-referrer";
+        img.src = slide.content;
+      }
+    });
+  }, [slides]);
 
   // Realtime Socket.IO Connection
   useEffect(() => {
@@ -81,6 +139,7 @@ export default function TVClient() {
            type: data.type || 'image',
            content: data.url || data.content || '',
            duration: data.duration || 10,
+           orgId: data.orgId || 'SYSTEM',
            createdAt: new Date().toISOString()
          };
          useStore.getState().assignSlideToTV(id, slide);
@@ -98,6 +157,7 @@ export default function TVClient() {
            type: data.type || 'image',
            content: data.url || data.content || '',
            duration: data.duration || 10,
+           orgId: data.orgId || 'SYSTEM',
            createdAt: new Date().toISOString()
          };
          useStore.getState().assignSlideToTV(id, slide);
@@ -139,6 +199,14 @@ export default function TVClient() {
       {/* If there is a slide displaying */}
       {slide ? (
         <div className="absolute inset-0 w-full h-full">
+          {/* Mode Badge Indicator */}
+          <div className="absolute top-6 right-6 flex items-center gap-3 bg-black/60 backdrop-blur-md px-4 py-2 rounded-full border border-white/10 z-50 text-white select-none">
+            <span className={`w-2 h-2 rounded-full ${tv?.currentSlide ? 'bg-amber-400' : 'bg-blue-400 animate-pulse'}`}></span>
+            <span className="text-xs font-bold tracking-wider uppercase font-sans">
+              {tv?.currentSlide ? "Diffusion Directe" : `Planification active : ${currentScheduledRule?.name || 'Routine'}`}
+            </span>
+          </div>
+
           {slide.type === 'image' && (
             <img 
               src={slide.content} 
@@ -148,10 +216,11 @@ export default function TVClient() {
             />
           )}
           {slide.type === 'text' && (
-            <div className="w-full h-full flex flex-col items-center justify-center bg-blue-950 bg-gradient-to-br from-blue-900 to-indigo-950 p-12 lg:p-24">
-              <h1 className="text-4xl sm:text-6xl md:text-8xl lg:text-[10rem] font-bold text-white text-center leading-tight">
-                {slide.content}
-              </h1>
+            <div className="w-full h-full flex flex-col items-center justify-center bg-blue-950 bg-gradient-to-br from-blue-900 to-indigo-950 p-12 lg:p-24 overflow-hidden">
+              <div 
+                className="text-white text-center leading-tight break-words max-w-5xl text-3xl sm:text-4xl md:text-5xl lg:text-7xl font-bold [&_h1]:text-4xl [&_h1]:sm:text-6xl [&_h1]:md:text-8xl [&_h1]:lg:text-9xl [&_h1]:font-bold [&_h1]:mb-6 [&_h2]:text-3xl [&_h2]:sm:text-5xl [&_h2]:md:text-7xl [&_h2]:lg:text-[5.5rem] [&_h2]:font-bold [&_h2]:mb-4 [&_p]:text-xl [&_p]:sm:text-2xl [&_p]:md:text-3xl [&_p]:lg:text-4xl [&_p]:mt-4 [&_p]:text-blue-200"
+                dangerouslySetInnerHTML={{ __html: slide.content }}
+              />
             </div>
           )}
         </div>

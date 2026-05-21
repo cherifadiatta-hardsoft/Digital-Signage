@@ -5,6 +5,7 @@ import AdminLayout from './components/admin/AdminLayout';
 import Dashboard from './pages/admin/Dashboard';
 import ScreensManager from './pages/admin/ScreensManager';
 import MediaLibrary from './pages/admin/MediaLibrary';
+import SchedulesManager from './pages/admin/SchedulesManager';
 import TVClient from './pages/tv/TVClient';
 import TVLogin from './pages/tv/TVLogin';
 
@@ -22,6 +23,7 @@ export default function App() {
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="screens" element={<ScreensManager />} />
           <Route path="media" element={<MediaLibrary />} />
+          <Route path="planning" element={<SchedulesManager />} />
         </Route>
         <Route path="/login-tv" element={<TVLogin />} />
         <Route path="/tv/client/:id" element={<TVClient />} />
