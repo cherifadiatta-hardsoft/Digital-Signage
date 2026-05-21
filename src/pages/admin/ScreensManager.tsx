@@ -137,12 +137,12 @@ export default function ScreensManager() {
                     <div className="flex items-center gap-2">
                        <input 
                          readOnly 
-                         value={`${window.location.origin}/tv/client/${generatedTV.id}?code=${generatedTV.code}`} 
+                         value={`${window.location.origin}/#/tv/client/${generatedTV.id}?code=${generatedTV.code}`} 
                          className="flex-1 text-xs font-mono p-2 bg-white border border-neutral-300 rounded outline-none"
                          onClick={(e) => (e.target as HTMLInputElement).select()}
                        />
                        <a 
-                         href={`/tv/client/${generatedTV.id}?code=${generatedTV.code}`} 
+                         href={`/#/tv/client/${generatedTV.id}?code=${generatedTV.code}`} 
                          target="_blank" 
                          rel="noreferrer"
                          className="p-2 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded transition-colors"
@@ -213,7 +213,7 @@ export default function ScreensManager() {
                 </div>
                 <div className="flex items-center gap-3">
                   <a 
-                    href={`/tv/client/${tv.id}?code=${tv.code}`}
+                    href={`/#/tv/client/${tv.id}?code=${tv.code}`}
                     target="_blank"
                     rel="noreferrer"
                     onClick={(e) => e.stopPropagation()}
@@ -247,7 +247,7 @@ export default function ScreensManager() {
                 
                 {/* Simulated Viewer Launcher */}
                 <a 
-                  href={`/login-tv`} 
+                  href={`/#/login-tv`} 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center gap-1"
