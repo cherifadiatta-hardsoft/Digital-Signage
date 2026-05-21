@@ -216,32 +216,32 @@ export default function TVClient() {
           backgroundColor: '#171717',
           background: 'linear-gradient(to bottom right, #171717, #000000)',
           color: '#ffffff',
-          padding: '32px',
+          padding: '8vw',
           boxSizing: 'border-box'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '24px', marginBottom: '48px' }}>
-            <MonitorPlay size={80} color="#3b82f6" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '3vw', marginBottom: '6vh' }}>
+            <MonitorPlay style={{ width: '8vw', height: '8vw' }} color="#3b82f6" />
             <div>
-              <h1 style={{ fontSize: '60px', fontWeight: 'bold', margin: '0', letterSpacing: '-0.025em' }}>HardSoft TV</h1>
-              <p style={{ fontSize: '24px', color: '#60a5fa', fontWeight: '500', letterSpacing: '0.1em', marginTop: '8px', textTransform: 'uppercase', margin: 0 }}>
+              <h1 style={{ fontSize: '6vw', fontWeight: 'bold', margin: '0', letterSpacing: '-0.025em', lineHeight: 1 }}>HardSoft TV</h1>
+              <p style={{ fontSize: '2.5vw', color: '#60a5fa', fontWeight: '500', letterSpacing: '0.1em', marginTop: '1vh', textTransform: 'uppercase', margin: 0 }}>
                 {initialTv.name}
               </p>
             </div>
           </div>
           
-          <div style={{ position: 'absolute', bottom: '48px', left: '48px', textAlign: 'left' }}>
-            <p style={{ color: '#737373', fontSize: '18px', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px', margin: 0 }}>
+          <div style={{ position: 'absolute', bottom: '8vh', left: '8vw', textAlign: 'left' }}>
+            <p style={{ color: '#737373', fontSize: '1.5vw', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '1vh', margin: 0 }}>
               Identifiant de connexion
             </p>
             <p style={{
-              fontSize: '36px',
+              fontSize: '2.5vw',
               fontFamily: 'monospace',
               fontWeight: 'bold',
               color: '#ffffff',
               letterSpacing: '0.1em',
               backgroundColor: 'rgba(255, 255, 255, 0.1)',
-              padding: '12px 24px',
-              borderRadius: '12px',
+              padding: '1.5vh 1.5vw',
+              borderRadius: '1vw',
               border: '1px solid rgba(255, 255, 255, 0.1)',
               display: 'inline-block',
               margin: 0
@@ -250,30 +250,30 @@ export default function TVClient() {
             </p>
           </div>
 
-          <div style={{ position: 'absolute', bottom: '48px', right: '48px', textAlign: 'right' }}>
-            <p style={{ fontSize: '64px', fontWeight: '300', fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.025em', margin: 0 }}>
+          <div style={{ position: 'absolute', bottom: '8vh', right: '8vw', textAlign: 'right' }}>
+            <p style={{ fontSize: '5vw', fontWeight: '300', fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.025em', margin: 0, lineHeight: 1 }}>
               {currentTime.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
             </p>
-            <p style={{ fontSize: '20px', color: '#a3a3a3', fontWeight: '500', marginTop: '8px', margin: 0 }}>
+            <p style={{ fontSize: '1.8vw', color: '#a3a3a3', fontWeight: '500', marginTop: '1vh', margin: 0 }}>
               {currentTime.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
             </p>
           </div>
           
           <div style={{
             position: 'absolute',
-            top: '48px',
-            left: '48px',
+            top: '8vh',
+            left: '8vw',
             display: 'flex',
             alignItems: 'center',
-            gap: '12px',
+            gap: '1vw',
             backgroundColor: 'rgba(34, 197, 94, 0.2)',
             color: '#4ade80',
-            padding: '8px 16px',
+            padding: '1vh 1.5vw',
             borderRadius: '9999px',
             border: '1px solid rgba(34, 197, 94, 0.3)'
           }}>
-            <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#4ade80' }}></span>
-            <span style={{ fontSize: '14px', fontWeight: 'bold', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+            <span style={{ width: '1vw', height: '1vw', borderRadius: '50%', backgroundColor: '#4ade80' }}></span>
+            <span style={{ fontSize: '1.2vw', fontWeight: 'bold', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
               En Ligne &bull; Connecté au Serveur
             </span>
           </div>
